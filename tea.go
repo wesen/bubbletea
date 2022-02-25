@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime/debug"
 	"sync"
@@ -244,6 +245,30 @@ func HideCursor() Msg {
 // hideCursorMsg is an internal command used to hide the cursor. You can send
 // this message with HideCursor.
 type hideCursorMsg struct{}
+
+// ExecMsg is returned by the Exec command. It contains any error returned from
+// an *exec.Cmd.
+type ExecCompletedMsg struct {
+	Err error
+}
+
+// Error satisfies the Error interface.
+func (e ExecCompletedMsg) Error() string {
+	return e.Err.Error()
+}
+
+// Exec executes an *exec.Cmd, releasing the program's input for the duration
+// of the command and returning it to Bubble Tea when the command execution has
+// finished, sending an ExecCompletedMsg when completed.
+func Exec(c *exec.Cmd) Cmd {
+	return func() Msg {
+		return execMsg{cmd: c}
+	}
+}
+
+type execMsg struct {
+	cmd *exec.Cmd
+}
 
 // NewProgram creates a new Program.
 func NewProgram(model Model, opts ...ProgramOption) *Program {
@@ -513,6 +538,19 @@ func (p *Program) StartReturningModel() (Model, error) {
 
 			case hideCursorMsg:
 				hideCursor(p.output)
+
+			case execMsg:
+				if err := p.ReleaseTerminal(); err != nil { // release input
+					p.msgs <- ExecCompletedMsg{Err: err}
+				} else if err := msg.cmd.Run(); err != nil { // execute cmd
+					p.msgs <- ExecCompletedMsg{Err: err}
+					_ = p.RestoreTerminal()
+				}
+
+				// Capture input again.
+				if err := p.RestoreTerminal(); err != nil {
+					p.msgs <- ExecCompletedMsg{Err: err}
+				}
 			}
 
 			// Process internal messages for the renderer.
