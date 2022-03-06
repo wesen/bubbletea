@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/muesli/termenv"
 	"log"
 	"os"
 	"time"
@@ -22,10 +23,12 @@ func main() {
 	}
 
 	// Initialize our program
-	p := tea.NewProgram(model(5))
+	p := tea.NewProgram(model(5), tea.WithOutput(os.Stderr))
 	if err := p.Start(); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("STDOUT\n")
 }
 
 // A model can be more or less any type of data. It holds all the data for a
@@ -59,7 +62,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Views return a string based on data in the model. That string which will be
 // rendered to the terminal.
 func (m model) View() string {
-	return fmt.Sprintf("Hi. This program will exit in %d seconds. To quit sooner press any key.\n", m)
+	output := termenv.NewOutput(os.Stderr)
+	ms := output.String(fmt.Sprintf("%d seconds", m)).Bold()
+	s := output.String(fmt.Sprintf("Hi. This program will exit in %s. To quit sooner press any key.\n", ms))
+	return fmt.Sprint(s)
 }
 
 // Messages are events that we respond to in our Update function. This
