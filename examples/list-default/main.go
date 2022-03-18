@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/muesli/termenv"
 	"os"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 type item struct {
 	title, desc string
@@ -20,7 +19,9 @@ func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
 type model struct {
-	list list.Model
+	list          list.Model
+	docStyle      lipgloss.Style
+	selectedIndex int
 }
 
 func (m model) Init() tea.Cmd {
@@ -33,8 +34,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
+		if msg.String() == "enter" {
+			return m, tea.Quit
+		}
+
 	case tea.WindowSizeMsg:
-		top, right, bottom, left := docStyle.GetMargin()
+		top, right, bottom, left := m.docStyle.GetMargin()
 		m.list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 	}
 
@@ -44,7 +49,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	return docStyle.Render(m.list.View())
+	return m.docStyle.Render(m.list.View())
 }
 
 func main() {
@@ -74,13 +79,24 @@ func main() {
 		item{title: "Terrycloth", desc: "In other words, towel fabric"},
 	}
 
-	m := model{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
+	output := termenv.NewOutput(os.Stderr)
+	termenv.SetDefaultOutput(os.Stderr)
+	m := model{
+		list: list.New(
+			list.WithItems(items),
+			list.WithDelegate(list.NewDefaultDelegate(lipgloss.NewStyleWithOutput(output))),
+			list.WithStyle(lipgloss.NewStyleWithOutput(output)),
+		),
+		docStyle: lipgloss.NewStyleWithOutput(output).Margin(1, 2),
+	}
 	m.list.Title = "My Fave Things"
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithOutput(os.Stderr))
 
-	if err := p.Start(); err != nil {
+	m2, err := p.StartReturningModel()
+	if err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
+	fmt.Println(m2.(model).list.Index())
 }

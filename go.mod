@@ -3,7 +3,12 @@ module github.com/charmbracelet/bubbletea
 go 1.13
 
 require (
+	github.com/charmbracelet/bubbles v0.10.3
+	github.com/charmbracelet/glamour v0.5.0
+	github.com/charmbracelet/lipgloss v0.5.0
 	github.com/containerd/console v1.0.3
+	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
+	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/mattn/go-isatty v0.0.14
 	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b
 	github.com/muesli/reflow v0.3.0
@@ -11,3 +16,8 @@ require (
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 )
+
+replace github.com/charmbracelet/bubbles => ../bubbles
+replace github.com/charmbracelet/glamour => ../glamour
+replace github.com/charmbracelet/lipgloss => ../lipgloss
+replace github.com/muesli/termenv => ../termenv
